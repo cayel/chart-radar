@@ -3,30 +3,29 @@ import sqlite3
 from datetime import datetime
 import shutil
 
-def create_table_ranking(connection):
+def execute_sql(connection, query):
+    """Execute a SQL query."""
     cursor = connection.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS ranking ( id TEXT PRIMARY KEY, name TEXT, description TEXT, url TEXT, style TEXT, year INTEGER, date DATE, language TEXT, created_date TIMESTAMP, active BOOLEAN DEFAULT 0)")
+    cursor.execute(query)
     connection.commit()
-    return 0
+
+def create_table_ranking(connection):
+    """Create the ranking table."""
+    execute_sql(connection, "CREATE TABLE IF NOT EXISTS ranking ( id TEXT PRIMARY KEY, name TEXT, description TEXT, url TEXT, style TEXT, year INTEGER, date DATE, language TEXT, created_date TIMESTAMP, active BOOLEAN DEFAULT 0)")
 
 def create_table_album(connection):
-    cursor = connection.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS album (rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
-    connection.commit()
-    return 0    
+    """Create the album table."""
+    execute_sql(connection, "CREATE TABLE IF NOT EXISTS album (rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
 
 def create_table_discogs(connection):
-    cursor = connection.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS discogs (id INTEGER PRIMARY KEY, artist TEXT, title TEXT, year INTEGER, image TEXT)")
-    connection.commit()
-    return 0
+    """Create the discogs table."""
+    execute_sql(connection, "CREATE TABLE IF NOT EXISTS discogs (id INTEGER PRIMARY KEY, artist TEXT, title TEXT, year INTEGER, image TEXT)")
 
 def insert_fake_data(connection):
-    cursor = connection.cursor()
-    cursor.execute("INSERT INTO ranking (id, name, description, url, style, year, date, language, created_date, active) VALUES ('test', 'Test', 'Test', 'http://test.com', 'Test', 2021, '2021-01-01', 'fr', '2021-01-01 00:00:00', 1)")    
-    cursor.execute("INSERT INTO album (rank, artist, title, year, id_discogs) VALUES (1, 'Test', 'Test', 2021, 1)")
-    cursor.execute("INSERT INTO discogs (id, artist, title, year, image) VALUES (1, 'Test', 'Test', 2021, 'http://test.com')")
-    connection.commit()
+    """Insert fake data into the tables."""
+    execute_sql(connection, "INSERT INTO ranking (id, name, description, url, style, year, date, language, created_date, active) VALUES ('test', 'Test', 'Test', 'http://test.com', 'Test', 2021, '2021-01-01', 'fr', '2021-01-01 00:00:00', 1)")
+    execute_sql(connection, "INSERT INTO album (rank, artist, title, year, id_discogs) VALUES (1, 'Test', 'Test', 2021, 1)")
+    execute_sql(connection, "INSERT INTO discogs (id, artist, title, year, image) VALUES (1, 'Test', 'Test', 2021, 'http://test.com')")
 
 def create_database(database_path):
     # Create data directory if it does not exist
