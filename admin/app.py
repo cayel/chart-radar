@@ -54,8 +54,8 @@ if menu == "Tableau de bord":
         count_albums_with_discogs = df_album[df_album['id_discogs'] > 0].shape[0]
         count_albums_with_discogs_not_found = df_album[df_album['id_discogs'] == 0].shape[0]
         percentage_albums_with_discogs = 100*(count_albums_with_discogs / count_albums) 
-        col2.metric("Nombre d'albums avec référence", count_albums_with_discogs, f"{percentage_albums_with_discogs:.0f}%")
-        col1.metric("Nombres d'albums avec référence discogs non trouvée", count_albums_with_discogs_not_found, f"{100*count_albums_with_discogs_not_found/count_albums:.0f}%")
+        col1.metric("Nombre d'albums avec référence", count_albums_with_discogs, f"{percentage_albums_with_discogs:.0f}%")
+        col2.metric("Nombres d'albums avec référence discogs non trouvée", count_albums_with_discogs_not_found, f"{100*count_albums_with_discogs_not_found/count_albums:.0f}%")
 
         print(df_album)
 elif menu == "Administration":

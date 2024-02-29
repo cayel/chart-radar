@@ -39,8 +39,6 @@ def update_discogs_links():
     # Load the album data from the database
     df_album = load_album(connection)
 
-    # Close the database connection
-
     # Update the discogs links
     for index, row in df_album.iterrows():
         if row['id_discogs'] is None:
