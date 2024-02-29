@@ -15,7 +15,7 @@ def create_table_ranking(connection):
 
 def create_table_album(connection):
     """Create the album table."""
-    execute_sql(connection, "CREATE TABLE IF NOT EXISTS album (rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
+    execute_sql(connection, "CREATE TABLE IF NOT EXISTS album (id_ranking TEXT, rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
 
 def create_table_discogs(connection):
     """Create the discogs table."""
@@ -24,7 +24,7 @@ def create_table_discogs(connection):
 def insert_fake_data(connection):
     """Insert fake data into the tables."""
     execute_sql(connection, "INSERT INTO ranking (id, name, description, url, style, year, date, language, created_date, active) VALUES ('test', 'Test', 'Test', 'http://test.com', 'Test', 2021, '2021-01-01', 'fr', '2021-01-01 00:00:00', 1)")
-    execute_sql(connection, "INSERT INTO album (rank, artist, title, year, id_discogs) VALUES (1, 'Test', 'Test', 2021, 1)")
+    execute_sql(connection, "INSERT INTO album (id_ranking, rank, artist, title, year, id_discogs) VALUES ('test', 1, 'Test', 'Test', 2021, 1)")
     execute_sql(connection, "INSERT INTO discogs (id, artist, title, year, image) VALUES (1, 'Test', 'Test', 2021, 'http://test.com')")
 
 def create_database(database_path):
