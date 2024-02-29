@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 import os
 from database_utils import create_database, drop_database, backup_database
-from discogs_utils import update_discogs_links
+from discogs_utils import update_discogs_links, get_info_discogs
 
 def load_ranking(connection):
     df_ranking = pd.read_sql_query("SELECT * FROM ranking", connection)
@@ -78,7 +78,9 @@ elif menu == "Administration":
         if st.button("Mettre à jour les liens discogs"):
             update_discogs_links()
             st.success("Les liens discogs ont été mis à jour.")
-            
+        if st.button("Mettre à jour les infos discogs"):
+            get_info_discogs()
+            st.success("Les infos discogs ont été mis à jour.")
                 
             
             
