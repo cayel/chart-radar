@@ -15,7 +15,7 @@ def create_table_ranking(connection):
 
 def create_table_album(connection):
     """Create the album table."""
-    execute_sql(connection, "CREATE TABLE IF NOT EXISTS album (id_ranking TEXT, rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
+    execute_sql(connection, "CREATE TABLE IF NOT EXISTS album (id INTEGER PRIMARY KEY AUTOINCREMENT, id_ranking TEXT, rank INTEGER, artist TEXT, title TEXT, year INTEGER, id_discogs INTEGER)")
 
 def create_table_discogs(connection):
     """Create the discogs table."""
