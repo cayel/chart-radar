@@ -16,6 +16,10 @@ def load_album(connection):
     df_album.rename(columns={'title': 'title_old'}, inplace=True)
     return df_album
 
+def load_discogs(connection):
+    df_discogs = pd.read_sql_query("SELECT * FROM discogs", connection)
+    return df_discogs
+
 # Create a connection to the SQLite database
 database_path = "../data/database.db"
 
@@ -36,6 +40,7 @@ if menu == "Tableau de bord":
         # Load the ranking data from the database
         df_ranking = load_ranking(connection)
         df_album = load_album(connection)
+        df_discogs = load_discogs(connection)
 
         # Close the database connection
         connection.close()
@@ -46,18 +51,33 @@ if menu == "Tableau de bord":
 
         st.header('Statistiques générales', divider='blue')        
         col1, col2, col3 = st.columns(3)
-        col1.metric("Nombres d'albums", count_albums)
-        col3.metric("Nombre d'albums avec pochette", count_albums_with_image, f"{100*count_albums_with_image/count_albums:.0f}%")
-        
+        col1.metric("Nombre de classements", df_album['id_ranking'].nunique())
+        col2.metric("Nombres d'albums", count_albums)
+
         st.header('Liens avec discogs', divider='blue')        
         col1, col2, col3 = st.columns(3)
         count_albums_with_discogs = df_album[df_album['id_discogs'] > 0].shape[0]
         count_albums_with_discogs_not_found = df_album[df_album['id_discogs'] == 0].shape[0]
         percentage_albums_with_discogs = 100*(count_albums_with_discogs / count_albums) 
-        col1.metric("Nombre d'albums avec référence", count_albums_with_discogs, f"{percentage_albums_with_discogs:.0f}%")
-        col2.metric("Nombres d'albums avec référence discogs non trouvée", count_albums_with_discogs_not_found, f"{100*count_albums_with_discogs_not_found/count_albums:.0f}%")
+        col1.metric("Référence Discogs", count_albums_with_discogs, f"{percentage_albums_with_discogs:.0f}%")
+        col2.metric("Référence Discogs non trouvée", count_albums_with_discogs_not_found, f"{100*count_albums_with_discogs_not_found/count_albums:.0f}%")
+        col3.metric("Nombre d'albums avec pochette", count_albums_with_image, f"{100*count_albums_with_image/count_albums:.0f}%")
+        
+        # Top 10 of most represented artists
+        st.header('Top 10 des artistes', divider='blue')
+        top_10_artists = df_discogs['artist'].value_counts().head(10)
+        top_10_artists = top_10_artists.sort_values(ascending=False)
+        # Display list in a datatable
+        st.dataframe(top_10_artists)
+        # Top 10 of moste represented years
+        st.header('Top 10 des années', divider='blue')
+        top_10_years = df_discogs['year'].value_counts().head(10)
+        top_10_years = top_10_years.sort_values(ascending=False)
+        # Display list in a bar chart   
+        st.bar_chart(top_10_years)
 
-        print(df_album)
+
+        
 elif menu == "Administration":
     st.header("Administration")
     if not os.path.exists(database_path):
