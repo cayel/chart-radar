@@ -3,17 +3,17 @@ import sqlite3
 import pandas as pd
 import os
 from database_utils import create_database, drop_database, backup_database
-from discogs_utils import update_discogs_links, get_info_discogs
+from discogs_utils import update_discogs_id_multiple, get_info_discogs
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def load_ranking(connection):
     df_ranking = pd.read_sql_query("SELECT * FROM ranking", connection)
     return df_ranking
 
 def load_album(connection):
-    df_album = pd.read_sql_query("SELECT * FROM album LEFT JOIN discogs on id_discogs=discogs.id", connection)
-    # Rename columns
-    df_album.rename(columns={'artist': 'artist_old'}, inplace=True)
-    df_album.rename(columns={'title': 'title_old'}, inplace=True)
+    df_album = pd.read_sql_query("SELECT album.id_ranking,album.rank,album.id_discogs, discogs.artist, discogs.title, discogs.year, discogs.image FROM album LEFT JOIN discogs on album.id_discogs=discogs.id", connection)
     return df_album
 
 def load_discogs(connection):
@@ -26,7 +26,7 @@ database_path = "../data/database.db"
 # Define the sidebar selectbox
 menu = st.sidebar.selectbox(
     "Menu",
-    ("Tableau de bord", "Administration")
+    ("Tableau de bord", "Classement", "Administration")
 )
 
 # Depending on the selection, display the corresponding page
@@ -96,11 +96,27 @@ elif menu == "Administration":
             else:
                 st.error(f"Une erreur est survenue lors de la sauvegarde de la base de données.")  
         if st.button("Mettre à jour les liens discogs"):
-            update_discogs_links()
+            update_discogs_id_multiple(sqlite3.connect(database_path),20)
             st.success("Les liens discogs ont été mis à jour.")
         if st.button("Mettre à jour les infos discogs"):
             get_info_discogs()
             st.success("Les infos discogs ont été mis à jour.")
+elif menu == "Classement":
+    st.header("Classement")
+    connection = sqlite3.connect(database_path)
+    df_ranking = load_ranking(connection)
+    df_album = load_album(connection)
+    connection.close()
+    # select a ranking from the list
+    ranking = st.selectbox("Classement", df_ranking['description'].unique())
+    # filter the albums by ranking
+    df_album_filtered = df_album[df_album['id_ranking'] == df_ranking[df_ranking['description'] == ranking].iloc[0]['id']]
+    # convert year to string with no decimal
+    df_album_filtered['year'] = df_album_filtered['year'].fillna(0).astype(int).astype(str)
+    # display the albums in a datatable (artist, title, year) sorted by rank
+    st.dataframe(df_album_filtered[['rank', 'artist', 'title', 'year']].sort_values(by='rank'),hide_index=True)
+
+
                 
             
             

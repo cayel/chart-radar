@@ -5,6 +5,7 @@ import pandas as pd
 import sqlite3
 from database_utils import execute_sql
 import streamlit as st
+import logging
 
 database_path = "../data/database.db"
 
@@ -13,6 +14,7 @@ def load_env():
     return os.getenv('TOKEN')
 
 def get_discogs_data(url, params):
+    print(params)
     response = requests.get(url, params=params)
     return response.json()
 
@@ -31,38 +33,104 @@ def search_and_get_master_id(artist, title):
         return data['results'][0]['master_id']
     else:
         return None
-    
+
+def search_and_get_release_id(artist, title):
+    token = load_env()
+
+    url = "https://api.discogs.com/database/search"
+    params = {
+        "release_title": title,
+        "artist": artist,
+        "type": "release",
+        "token": token
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+    if data is not None and data['results'] != []:
+        return data['results'][0]['id']
+    else:
+        return None
+        
 def load_album(connection):
-    df_album = pd.read_sql_query("SELECT * FROM album WHERE id_discogs IS NULL LIMIT 20", connection)
+    df_album = pd.read_sql_query("SELECT * FROM album WHERE (id_discogs IS NULL OR (id_discogs=0 AND (reference IS NULL)))  LIMIT 20", connection)
+    print(df_album)
     return df_album
 
-def update_album_link(connection, id_album, id_discogs):
-    execute_sql(connection, f"UPDATE album SET id_discogs = {id_discogs} WHERE id = {id_album}")
-    
-def update_discogs_links():
-    # Create a progress bar
-    progress_bar = st.progress(0)
-    # Connect to the database
-    connection = sqlite3.connect(database_path)
-
-    # Load the album data from the database
-    df_album = load_album(connection)
-
-    # Update the discogs links
-    for index, row in df_album.iterrows():
-        progress_bar.progress((index + 1) / 20)
-        if row['id_discogs'] is None:
-            discogs_id = search_and_get_master_id(row['artist'], row['title'])
+def update_album_link(connection, id_album, id_discogs, reference):
+    execute_sql(connection, f"UPDATE album SET id_discogs = {id_discogs}, reference = '{reference}' WHERE id = {id_album}")
+ 
+def update_one_discogs_links(row_album):
+    if (row_album['id_discogs'] is None) or ((row_album['id_discogs'] == 0) and (row_album['reference'] is None)):
+        discogs_id = search_and_get_master_id(row_album['artist'], row_album['title'])
+        if discogs_id is not None:
+            # Album found on Discogs
+            return discogs_id, 'master'
+        else:
+            # Album not found on Discogs
+            discogs_id = search_and_get_release_id(row_album['artist'], row_album['title'])
             if discogs_id is not None:
-                # Album found on Discogs
-                df_album.at[index, 'id_discogs'] = discogs_id   
-                update_album_link(connection, row['id'], discogs_id)
+                return discogs_id, 'release'
             else:
                 # Album not found on Discogs
-                update_album_link(connection, row['id'], 0)
-                
-    # Close the database connection
-    connection.close()
+                return 0, ''
+    return row_album['id_discogs'], row_album['reference']
+
+
+def get_first_album_without_discogs_id(connection):
+    logging.info("Getting the first album without a Discogs ID...")
+    row_album = pd.read_sql_query("SELECT * FROM album WHERE (id_discogs IS NULL OR (id_discogs=0 AND (reference IS NULL))) LIMIT 1", connection)
+    logging.info(f"Retrieved album: {row_album}")
+    return row_album
+
+def get_discogs_id(row_album):
+    logging.info("Getting Discogs ID...")
+    if row_album['id_discogs'].isnull().any() or ((row_album['id_discogs'] == 0).any() and row_album['reference'].isnull().any()):
+        discogs_id = search_and_get_master_id(row_album['artist'], row_album['title'])
+        if discogs_id is not None:
+            # Album found on Discogs
+            logging.info(f"Album found on Discogs with master ID: {discogs_id}")
+            return discogs_id, 'master'
+        else:
+            # Album not found on Discogs
+            discogs_id = search_and_get_release_id(row_album['artist'], row_album['title'])
+            if discogs_id is not None:
+                logging.info(f"Album found on Discogs with release ID: {discogs_id}")
+                return discogs_id, 'release'
+            else:
+                # Album not found on Discogs
+                logging.info("Album not found on Discogs.")
+                return 0, ''
+    logging.info(f"Returning existing Discogs ID: {row_album['id_discogs']}")
+    return row_album['id_discogs'], row_album['reference']
+
+def update_discogs_id(connection, id_album, id_discogs, reference):
+    try:
+        logging.info(f"Updating Discogs ID for album ID: {id_album}...")
+        execute_sql(connection, f"UPDATE album SET id_discogs = {id_discogs}, reference = '{reference}' WHERE id = {id_album}")
+        logging.info(f"Updated Discogs ID to {id_discogs} and reference to {reference} for album ID: {id_album}")
+    except Exception as e:
+        logging.error(f"An error occurred while updating Discogs ID for album ID: {id_album}: {e}")
+
+def calculate_discogs_id(connection):
+    # Create a progress bar
+    progress_bar = st.progress(0)
+    # Load the first album without discogs id
+    row_album = get_first_album_without_discogs_id(connection)
+    if not row_album.empty:
+        id_discogs, reference = get_discogs_id(row_album)
+        update_discogs_id(connection, row_album['id'].iloc[0], id_discogs, reference)
+    else:
+        logging.info("No album without Discogs ID found.")
+    # Clear the progress bar
+    progress_bar.empty()
+
+def update_discogs_id_multiple(connection, number_of_updates=10):
+    # Create a progress bar
+    progress_bar = st.progress(0)
+    # Call 10 times the function update_discogs_id
+    for i in range(number_of_updates):
+        calculate_discogs_id(connection)
+        progress_bar.progress((i + 1) / number_of_updates)
     # Clear the progress bar
     progress_bar.empty()
 
