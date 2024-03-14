@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import os
-from database_utils import create_database, drop_database, backup_database
+from database_utils import create_database, drop_database, backup_database, create_test_database
 from discogs_utils import update_discogs_id_multiple, get_info_discogs
 import logging
 
@@ -95,6 +95,11 @@ elif menu == "Administration":
                 st.success(f"La base de données {database_path} a été sauvegardée.")
             else:
                 st.error(f"Une erreur est survenue lors de la sauvegarde de la base de données.")  
+        if st.button("Créer une base de données de test"):
+            if (create_test_database("./tests/database_test.db") == 0) :
+                st.success(f"La base de données de test {database_path} a été créée.")
+            else:
+                st.error(f"Une erreur est survenue lors de la création de la base de données de test.")  
         if st.button("Mettre à jour les liens discogs"):
             update_discogs_id_multiple(sqlite3.connect(database_path),20)
             st.success("Les liens discogs ont été mis à jour.")
