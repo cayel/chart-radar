@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 import shutil
-
+   
 def execute_sql(connection, query):
     """Execute a SQL query."""
     cursor = connection.cursor()
