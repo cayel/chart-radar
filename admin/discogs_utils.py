@@ -6,8 +6,34 @@ import sqlite3
 from database_utils import execute_sql
 import streamlit as st
 import logging
+from album import Album
 
+class Discogs:
+    def __init__(self, database_path):
+        self.token = self.load_env()
+
+    def load_env(self):
+        load_dotenv()
+        return os.getenv('TOKEN')
+
+    def get_discogs_data(self, url, params):
+        print(params)
+        response = requests.get(url, params=params)
+        return response.json()
+
+    def search_and_get_master_id(self, artist, title):        
+        url = "https://api.discogs.com/database/search"
+        params = {
+            "release_title": title,
+            "artist": artist,
+            "type": "master",
+            "token": self.token
+        }
+        data = self.get_discogs_data(url, params)
+        return data
+    
 database_path = "../data/database.db"
+
 
 def load_env():
     load_dotenv()
@@ -116,7 +142,7 @@ def calculate_discogs_id(connection):
     progress_bar = st.progress(0)
     # Load the first album without discogs id
     row_album = get_first_album_without_discogs_id(connection)
-    if not row_album.empty:
+    if not row_album.empty:        
         id_discogs, reference = get_discogs_id(row_album)
         update_discogs_id(connection, row_album['id'].iloc[0], id_discogs, reference)
     else:
