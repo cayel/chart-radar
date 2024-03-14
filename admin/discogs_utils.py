@@ -7,101 +7,13 @@ from database_utils import execute_sql
 import streamlit as st
 import logging
 from album import Album
-
-class Discogs:
-    def __init__(self, database_path):
-        self.token = self.load_env()
-
-    def load_env(self):
-        load_dotenv()
-        return os.getenv('TOKEN')
-
-    def get_discogs_data(self, url, params):
-        print(params)
-        response = requests.get(url, params=params)
-        return response.json()
-
-    def search_and_get_master_id(self, artist, title):        
-        url = "https://api.discogs.com/database/search"
-        params = {
-            "release_title": title,
-            "artist": artist,
-            "type": "master",
-            "token": self.token
-        }
-        data = self.get_discogs_data(url, params)
-        return data
+from discogs import Discogs
     
 database_path = "../data/database.db"
-
-
-def load_env():
-    load_dotenv()
-    return os.getenv('TOKEN')
-
-def get_discogs_data(url, params):
-    print(params)
-    response = requests.get(url, params=params)
-    return response.json()
-
-def search_and_get_master_id(artist, title):        
-    token = load_env()
     
-    url = "https://api.discogs.com/database/search"
-    params = {
-        "release_title": title,
-        "artist": artist,
-        "type": "master",
-        "token": token
-    }
-    data = get_discogs_data(url, params)
-    if 'results' in data and data['results']:
-        return data['results'][0]['master_id']
-    else:
-        return None
-
-def search_and_get_release_id(artist, title):
-    token = load_env()
-
-    url = "https://api.discogs.com/database/search"
-    params = {
-        "release_title": title,
-        "artist": artist,
-        "type": "release",
-        "token": token
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
-    if data is not None and data['results'] != []:
-        return data['results'][0]['id']
-    else:
-        return None
-        
-def load_album(connection):
-    df_album = pd.read_sql_query("SELECT * FROM album WHERE (id_discogs IS NULL OR (id_discogs=0 AND (reference IS NULL)))  LIMIT 20", connection)
-    print(df_album)
-    return df_album
-
 def update_album_link(connection, id_album, id_discogs, reference):
     execute_sql(connection, f"UPDATE album SET id_discogs = {id_discogs}, reference = '{reference}' WHERE id = {id_album}")
  
-def update_one_discogs_links(row_album):
-    if (row_album['id_discogs'] is None) or ((row_album['id_discogs'] == 0) and (row_album['reference'] is None)):
-        discogs_id = search_and_get_master_id(row_album['artist'], row_album['title'])
-        if discogs_id is not None:
-            # Album found on Discogs
-            return discogs_id, 'master'
-        else:
-            # Album not found on Discogs
-            discogs_id = search_and_get_release_id(row_album['artist'], row_album['title'])
-            if discogs_id is not None:
-                return discogs_id, 'release'
-            else:
-                # Album not found on Discogs
-                return 0, ''
-    return row_album['id_discogs'], row_album['reference']
-
-
 def get_first_album_without_discogs_id(connection):
     logging.info("Getting the first album without a Discogs ID...")
     row_album = pd.read_sql_query("SELECT * FROM album WHERE (id_discogs IS NULL OR (id_discogs=0 AND (reference IS NULL))) LIMIT 1", connection)
@@ -109,16 +21,17 @@ def get_first_album_without_discogs_id(connection):
     return row_album
 
 def get_discogs_id(row_album):
+    discogs = Discogs()
     logging.info("Getting Discogs ID...")
     if row_album['id_discogs'].isnull().any() or ((row_album['id_discogs'] == 0).any() and row_album['reference'].isnull().any()):
-        discogs_id = search_and_get_master_id(row_album['artist'], row_album['title'])
+        discogs_id = discogs.search_and_get_master_id(row_album['artist'], row_album['title'])
         if discogs_id is not None:
             # Album found on Discogs
             logging.info(f"Album found on Discogs with master ID: {discogs_id}")
             return discogs_id, 'master'
         else:
             # Album not found on Discogs
-            discogs_id = search_and_get_release_id(row_album['artist'], row_album['title'])
+            discogs_id = discogs.search_and_get_release_id(row_album['artist'], row_album['title'])
             if discogs_id is not None:
                 logging.info(f"Album found on Discogs with release ID: {discogs_id}")
                 return discogs_id, 'release'

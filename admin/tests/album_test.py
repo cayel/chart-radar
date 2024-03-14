@@ -1,5 +1,7 @@
 import unittest
 from album import Album
+from discogs import Discogs, DiscogsInfo
+
 
 class TestAlbum(unittest.TestCase):
     def setUp(self):
@@ -22,6 +24,33 @@ class TestAlbum(unittest.TestCase):
         self.album.update_discogs_id('5678', 'ref2')
         self.assertEqual(self.album.id_discogs, '5678')
         self.assertEqual(self.album.reference, 'ref2')
+
+class TestDiscogsInfo(unittest.TestCase):
+    def setUp(self):
+        self.discogs_info = DiscogsInfo('The Beatles', 'Abbey Road')
+
+    def test_init(self):
+        self.assertEqual(self.discogs_info.artist, 'The Beatles')
+        self.assertEqual(self.discogs_info.title, 'Abbey Road')
+
+    def test_get_info(self):
+        self.assertEqual(self.discogs_info.get_info(), 0)
+        self.assertEqual(self.discogs_info.reference, 'master')
+        self.assertEqual(self.discogs_info.artist, 'The Beatles')
+        self.assertEqual(self.discogs_info.title, 'Abbey Road')
+        self.assertEqual(self.discogs_info.year, 1969)
+
+    def test_get_info_not_found(self):
+        discogs_info = DiscogsInfo('The Beatles', 'Abbey Road 123')
+        self.assertEqual(discogs_info.get_info(), -1)
+    
+    def test_get_info_is_release(self):
+        discogs_info = DiscogsInfo('Laura Veirs', 'Phone Orphans')
+        self.assertEqual(discogs_info.get_info(), 0)
+        self.assertEqual(discogs_info.reference, 'release')
+        self.assertEqual(discogs_info.artist, 'Laura Veirs')
+        self.assertEqual(discogs_info.title, 'Phone Orphans')
+        self.assertEqual(discogs_info.year, 2023)
 
 if __name__ == '__main__':
     unittest.main()
